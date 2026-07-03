@@ -7,35 +7,12 @@ const {
   scrubValidationOnlyFields,
 } = require("./validators");
 
-function createValidationMiddleware(options = {}) {
-  const useRedirect = options.redirect === true;
-
-  const renderFn = options.render || function defaultRender(req, res, formattedErrors) {
-    const viewPath = req.path.substring(1);
-    return res.render(viewPath, {
-      errors: formattedErrors.errors,
-      errorList: formattedErrors.errorSummary,
-    });
-  };
-
-  function handleFailure(req, res, formattedErrors) {
-    if (useRedirect) {
-      req.session._validationErrors = {
-        errors: formattedErrors.errors,
-        errorList: formattedErrors.errorSummary,
-      };
-      const redirectTo = req.get("Referer") || req.path;
-      debugValidation(req, "Redirecting back with flash errors", { redirectTo });
-      return res.redirect(redirectTo);
-    }
-    return renderFn(req, res, formattedErrors);
-  }
-
+function createValidationMiddleware() {
   return function validationEngine(req, res, next) {
     if (req.method !== "POST") {
       // Flash-reader: pick up any errors stored by a previous redirect and expose them
       // to the template via res.locals so custom GET routes can supply their own data too.
-      if (useRedirect && req.session && req.session._validationErrors) {
+      if (req.session && req.session._validationErrors) {
         const flash = req.session._validationErrors;
         delete req.session._validationErrors;
         res.locals.errors = flash.errors;
@@ -190,7 +167,13 @@ function createValidationMiddleware(options = {}) {
       const formattedErrors = formatErrors(validationErrors);
       debugValidation(req, "Formatted validation errors", formattedErrors);
 
-      return handleFailure(req, res, formattedErrors);
+      req.session._validationErrors = {
+        errors: formattedErrors.errors,
+        errorList: formattedErrors.errorSummary,
+      };
+      const redirectTo = req.get("Referer") || req.path;
+      debugValidation(req, "Redirecting back with flash errors", { redirectTo });
+      return res.redirect(redirectTo);
     }
 
     // VALIDATION PASSED — clean up rules from session/body then hand off to next middleware.

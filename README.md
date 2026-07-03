@@ -2,7 +2,7 @@
 
 Validation engine for NHS prototype kit apps.
 
-Define validation rules directly in your Nunjucks templates. No custom routes or server logic needed. When a form is submitted, the middleware checks the rules, and if validation fails it re-renders the page with the NHS error summary and inline error messages. For prototypes with custom GET routes or dynamic URL parameters, an optional [redirect mode](#redirect-mode-optional) is also available.
+Define validation rules directly in your Nunjucks templates. No custom routes or server logic needed. When a form is submitted, the middleware checks the rules, and if validation fails it redirects back to the originating URL with the NHS error summary and inline error messages. Because it redirects rather than re-rendering directly, it works with any routing pattern — simple pages, custom GET routes, and dynamic URLs like `patients/1234/appointment` all work without any extra configuration.
 
 ---
 
@@ -58,44 +58,6 @@ This will prompt you:
 ```
 Copy example validation pages to app/views/validation/? (y/N)
 Copy validation docs to docs/validation.md? (y/N)
-```
-
-#### redirect mode (optional)
-
-By default, when validation fails the middleware re-renders the current page directly using `res.render`. This works well for most prototypes where the URL path matches the page name.
-
-If your prototype uses **custom GET routes that supply extra data** (lookups, array indexing, URL parameters like `patients/1234/appointment`, etc.), enable redirect mode instead:
-
-```js
-router.use(createValidationMiddleware({ redirect: true }));
-```
-
-In redirect mode, validation failures redirect back to the originating URL (using the `Referer` header). Errors are carried across in the session and automatically made available to the template as `errors` and `errorList` on the next GET request — so your existing `router.get()` routes run as normal and supply all their data.
-
-This means dynamic routes like the following work without any changes:
-
-```js
-router.get('patients/:id/appointment', (req, res) => {
-  const patient = patients[req.params.id];
-  res.render('appointment', { patient });
-});
-```
-
-The template receives both `patient` (from the GET route) and `errors` / `errorList` (from the flash) on the re-render.
-
-#### Custom render callback (optional)
-
-For full manual control, supply a `render` function. The middleware calls it instead of `res.render` when validation fails:
-
-```js
-router.use(createValidationMiddleware({
-  render(req, res, formattedErrors) {
-    res.render('my/custom/path', {
-      errors: formattedErrors.errors,
-      errorList: formattedErrors.errorSummary,
-    });
-  }
-}));
 ```
 
 ---
