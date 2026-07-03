@@ -1,6 +1,6 @@
 {
   "name": "nhsuk-prototype-kit-validation",
-  "version": "0.3.0-beta.1",
+  "version": "0.3.0",
   "description": "Validation engine for NHS prototype kit apps. Declarative rules, custom validators, NHS-shaped error output.",
   "keywords": [
     "nhs",
