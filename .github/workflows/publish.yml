@@ -32,8 +32,10 @@ jobs:
         if: contains(github.ref_name, '-')
         run: npm publish --tag beta --provenance --access public
 
-      # Full release tags (e.g. v0.3.0) → stage the package.
-      # A maintainer must review and 2FA-approve it on npmjs.com before it goes live.
-      - name: Stage full release (requires 2FA approval on npmjs.com)
+      # Full release tags (e.g. v0.3.0) → publish under the default "latest"
+      # dist-tag. Depending on the npm token's access-token policy, this can
+      # still require a maintainer's 2FA approval on npmjs.com before it goes
+      # live (npm queues the publish rather than the workflow itself pausing).
+      - name: Publish full release (may require 2FA approval on npmjs.com)
         if: "!contains(github.ref_name, '-')"
-        run: npm stage publish
+        run: npm publish --provenance --access public
