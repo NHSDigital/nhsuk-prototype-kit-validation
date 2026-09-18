@@ -1,4 +1,4 @@
 {% macro applyValidation(field, rules) %}
   {# The 'dump' filter turns the JS object into a JSON string, 'escape' makes it safe for HTML attributes #}
-  <input type="hidden" name="_validationRules[{{ field }}]" value="{{ rules | dump | escape }}">
+  <input type="hidden" name="_validationRules[{{ field }}]" value="{{ rules | dump | escape }}" />
 {% endmacro %}
