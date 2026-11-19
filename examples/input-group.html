@@ -1,0 +1,115 @@
+{% extends 'layout.html' %}
+
+{% block pageTitle %}
+  {% if errorList %}Error: {% endif %}What is your phone number?
+{% endblock %}
+
+{% block content %}
+  <div class="nhsuk-grid-row">
+    <div class="nhsuk-grid-column-two-thirds">
+      {% if errorList %}
+        {{
+          errorSummary({
+            titleText: "There is a problem",
+            errorList: errorList
+          })
+        }}
+      {% endif %}
+
+      <form method="post">
+        <div class="nhsuk-form-group {%- if errors.phone %} nhsuk-form-group--error{% endif %}">
+          <fieldset class="nhsuk-fieldset" role="group" aria-describedby="phone-hint {%- if errors.phone %} phone-error{% endif %}">
+            <legend class="nhsuk-fieldset__legend nhsuk-fieldset__legend--l">
+              <h1 class="nhsuk-fieldset__heading">
+                What is your phone number?
+              </h1>
+            </legend>
+
+            <div class="nhsuk-hint" id="phone-hint">Include your country or dialling code. The code for the UK is +44.</div>
+
+            {% if errors.phone %}
+              {{
+                errorMessage({
+                  id: "phone-error",
+                  text: errors.phone.text
+                })
+              }}
+            {% endif %}
+
+            {# Side by side from tablet width up. errorMessage: true highlights an input without adding another message #}
+            <div class="nhsuk-form-group--inline">
+              {{
+                input({
+                  label: {
+                    text: "Country code",
+                    classes: "nhsuk-u-visually-hidden"
+                  },
+                  id: "phone-country-code",
+                  name: "phoneCountryCode",
+                  prefix: "+",
+                  value: data.phoneCountryCode,
+                  inputmode: "tel",
+                  autocomplete: "tel-country-code",
+                  classes: "nhsuk-input--width-3",
+                  errorMessage: errors.phone and "phoneCountryCode" in errors.phone.invalidFields
+                })
+              }}
+
+              {{
+                input({
+                  label: {
+                    text: "Phone number",
+                    classes: "nhsuk-u-visually-hidden"
+                  },
+                  id: "phone-number",
+                  name: "phoneNumber",
+                  value: data.phoneNumber,
+                  inputmode: "tel",
+                  autocomplete: "tel-national",
+                  classes: "nhsuk-input--width-10",
+                  errorMessage: errors.phone and "phoneNumber" in errors.phone.invalidFields
+                })
+              }}
+            </div>
+          </fieldset>
+        </div>
+
+        {{
+          applyGroupValidation('phone', {
+            phoneCountryCode: {
+              presence: {
+                allowEmpty: false,
+                message: "Enter a country code, like +44"
+              },
+              format: {
+                pattern: "\\+?\\d{1,3}",
+                message: "Enter a country code, like +44"
+              }
+            },
+            phoneNumber: {
+              presence: {
+                allowEmpty: false,
+                message: "Enter a phone number"
+              },
+              format: {
+                pattern: "[0-9 ]+",
+                message: "Enter a phone number using numbers only"
+              },
+              digitLength: {
+                minimum: 10,
+                maximum: 11,
+                message: "Enter a phone number with 10 or 11 digits"
+              }
+            }
+          })
+        }}
+
+        {{
+          button({
+            text: "Continue"
+          })
+        }}
+      </form>
+    </div>
+  </div>
+{% endblock %}
