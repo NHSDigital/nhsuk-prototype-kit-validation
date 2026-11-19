@@ -146,6 +146,83 @@ Here is a complete, working example of a page with validation applied:
 
 ---
 
+## Writing validation rules
+
+Rules are written in Nunjucks as a JavaScript-style object. Each key is a validator name, and its value holds that validator's options:
+
+```njk
+{{ applyValidation('nhsNumber', {
+  presence: { allowEmpty: false, message: "Enter your NHS number" },
+  format: { pattern: "[0-9 ]+", message: "NHS number must only include numbers" },
+  digitLength: { is: 10, message: "NHS number must be 10 digits" }
+}) }}
+```
+
+### Where rules go
+
+* Put `applyValidation()` inside the `<form>`, usually straight after the input it checks. The hidden rules input has to be submitted with the form.
+* The first argument must match the input's `name`. For date inputs, use the date input's `name` without `-day`, `-month` or `-year`.
+* Use one `applyValidation()` per field. For inputs in a group, use `applyGroupValidation()` instead (see [Validating a group of inputs](#validating-a-group-of-inputs-for-example-a-phone-number)).
+* Set the input's `id` to the kebab-case of its `name` (`nhsNumber` → `nhs-number`), so the error summary link goes to the input.
+
+### How rules run
+
+* **Rules run in the order you write them.** Each field shows only its **first** failing message, so put `presence` first, then format checks, then length or range checks.
+* **Blank answers are still checked by most built-in rules.** A blank answer fails `format`, `length`, `email`, `numericality` and `url`. The custom rules (`digitLength`, `fileType`, `doesNotContain` and the date rules) skip blank answers.
+  * Required field: put `presence` first, so the user sees "Enter…" rather than a format message.
+  * Optional field: make the whole pattern optional, for example `pattern: "(\\d{1,3})?"`. A blank answer then passes, and anything entered is still checked.
+* All posted values are text. `numericality` accepts text like `"12"`, unless you set `strict: true`.
+* Checkbox answers are lists. `presence` fails if nothing is ticked, and `length: { minimum: 2 }` counts ticked options.
+
+### Messages
+
+* Always set `message`. Without it, users see validate.js defaults such as "is invalid".
+* Avoid `%{value}` in messages. validate.js does put the user's answer in, but changes it first: it lowercases it and turns hyphens and underscores into spaces (`Bob-1` shows as "bob 1").
+* A leading `^` is not needed. It is removed if you add one.
+* One `message` covers every way a rule can fail. If you need different messages, use separate rules, for example `presence` for blank answers and `digitLength` for the wrong number of digits.
+
+### Patterns (`format`)
+
+* The **whole** answer must match the pattern. You don't need `^` or `$`.
+* Write the pattern as a string and **double every backslash**: `"\\d"` becomes the regex `\d`. Nunjucks drops a single backslash, so `"\d"` matches the letter `d`.
+* Add `flags: "i"` to ignore case.
+
+| To allow | Pattern |
+| --- | --- |
+| Digits only | `"\\d+"` |
+| Digits and spaces | `"[0-9 ]+"` |
+| Exactly 6 digits | `"\\d{6}"` |
+| Optional `+`, then 1 to 3 digits | `"\\+?\\d{1,3}"` |
+| Letters, spaces, hyphens and apostrophes | `"[A-Za-z' \\-]+"` |
+| Blank, or 1 to 3 digits (optional field) | `"(\\d{1,3})?"` |
+
+### Built-in rules from validate.js
+
+These come from [validate.js](https://validatejs.org/#validators). All of them accept `message`.
+
+| Rule | Useful options | Example use |
+| --- | --- | --- |
+| `presence` | `allowEmpty: false` | Required fields |
+| `length` | `minimum`, `maximum`, `is` | Characters in text, or ticked checkboxes |
+| `format` | `pattern`, `flags` | Allowed characters |
+| `numericality` | `onlyInteger`, `greaterThan`, `greaterThanOrEqualTo`, `lessThan`, `lessThanOrEqualTo`, `equalTo`, `strict` | Ages, quantities |
+| `inclusion` | `within: [...]` | Answer must be one of a list |
+| `exclusion` | `within: [...]` | Answer must not be one of a list |
+| `equality` | `attribute: "<otherFieldName>"` | "Confirm password" matches `newPassword` |
+| `email` | | Email addresses |
+| `url` | | Web addresses |
+
+validate.js's `date` and `datetime` rules are not set up and will cause an error. Use `isValidDate`, `isInPast`, `isInFuture` and `dateGuess` instead.
+
+The custom rules added by this kit are listed in [Available Validation Rules](#available-validation-rules) below.
+
+### Checking your rules
+
+* If the page won't render after you add rules, check the rules object for a missing comma or bracket.
+* Run the prototype with `VALIDATION_DEBUG=true` (see [Validation debug logging](#validation-debug-logging-onoff)). The terminal then shows the rules that were received, the values checked and each failing message.
+
+---
+
 ## Available Validation Rules
 
 You can combine different rules to make sure the user enters exactly what you need. Here are the core rules you can use inside the `applyValidation` macro:

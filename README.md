@@ -109,6 +109,16 @@ Add `applyValidation()` directly beneath any input that needs validation. Pass i
 
 The `errorMessage: errors.<fieldName>` property wires the individual field error. `errorList` feeds the summary at the top of the page.
 
+### Writing rules
+
+The [Writing validation rules](docs/validation.md#writing-validation-rules) guide covers rule order, messages, patterns and the built-in validate.js rules. The things that most often catch people out:
+
+- **Rules run in order, and each field shows only its first failing message.** Put `presence` first.
+- **A blank answer still fails `format`, `length`, `email`, `numericality` and `url`.** For an optional field, make the pattern optional, for example `"(\\d{1,3})?"`.
+- **Double every backslash in patterns.** `"\\d"` becomes `\d`; `"\d"` becomes the letter `d`.
+- **The whole answer must match a `format` pattern**, so you don't need `^` or `$`.
+- **Always set `message`**, or users see validate.js defaults such as "is invalid".
+
 ---
 
 ## Validator reference
@@ -309,7 +319,9 @@ The `or []` fallback prevents template errors on first page load.
 
 All [validate.js](https://validatejs.org/) built-in validators are also available:
 
-`presence`, `length`, `email`, `type`, `inclusion`, `exclusion`, `format`, `numericality`, `equality`, `url`, `datetime`
+`presence`, `length`, `email`, `type`, `inclusion`, `exclusion`, `format`, `numericality`, `equality`, `url`
+
+`date` and `datetime` are not set up and will cause an error. Use the date validators above.
 
 ---
 
@@ -382,7 +394,7 @@ The fieldset is written out in HTML, so `errors.phone` goes straight into the ma
 Notes:
 
 - Don't also use `applyValidation()` on an input that is part of a group.
-- `format` skips empty values, so add `presence` to make a field required. The country code pattern allows an optional `+` because autofill can insert one, even though the prefix shows it.
+- Put `presence` first so a blank answer shows "Enter…" rather than a format message. The country code pattern allows an optional `+` because autofill can insert one, even though the prefix shows it.
 - To reuse a group like this, wrap it in your own macro file (for example `app/views/macros/phone-input.njk`). Don't edit `macros/validation.njk`, because it is overwritten each time you run `npm install`.
 
 ---
