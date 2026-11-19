@@ -160,3 +160,93 @@ describe("GET: flash reader", () => {
   });
 });
 
+
+// ---------------------------------------------------------------------------
+// POST — grouped validation
+// ---------------------------------------------------------------------------
+
+const PHONE_GROUP_RULES = JSON.stringify({
+  _group: {
+    phoneCountryCode: {
+      format: { pattern: "\\+\\d{1,3}", message: "Enter a country code, like +44" },
+    },
+    phoneNumber: {
+      presence: { allowEmpty: false, message: "Enter a phone number" },
+      format: { pattern: "[0-9 ]+", message: "Enter a phone number using numbers only" },
+      digitLength: { minimum: 10, maximum: 11, message: "Phone number must be 10 or 11 digits" },
+    },
+  },
+});
+
+function runGroup(body) {
+  const middleware = createValidationMiddleware();
+  const req = makeReq({ body: { _validationRules: { phone: PHONE_GROUP_RULES }, ...body } });
+  const next = makeNext();
+  middleware(req, makeRes(), next);
+  return { flash: req.session._validationErrors, next };
+}
+
+describe("POST: grouped validation", () => {
+  it("collapses member errors into one group error and one summary entry", () => {
+    const { flash } = runGroup({ phoneCountryCode: "+", phoneNumber: "abc" });
+
+    assert.deepEqual(flash.errors, {
+      phone: {
+        text: "Enter a country code, like +44",
+        invalidFields: ["phoneCountryCode", "phoneNumber"],
+      },
+    });
+    assert.deepEqual(flash.errorList, [{ text: "Enter a country code, like +44", href: "#phone-country-code" }]);
+  });
+
+  it("links the summary to the first invalid member", () => {
+    const { flash } = runGroup({ phoneCountryCode: "+44", phoneNumber: "" });
+
+    assert.deepEqual(flash.errors.phone.invalidFields, ["phoneNumber"]);
+    assert.deepEqual(flash.errorList, [{ text: "Enter a phone number", href: "#phone-number" }]);
+  });
+
+  it("fails presence for a member that was not posted, ignoring stale session data", () => {
+    const middleware = createValidationMiddleware();
+    const req = makeReq({
+      body: { _validationRules: { phone: PHONE_GROUP_RULES }, phoneCountryCode: "+44" },
+      session: { data: { phoneNumber: "07700900123" } },
+    });
+    middleware(req, makeRes(), makeNext());
+
+    assert.equal(req.session._validationErrors.errors.phone.text, "Enter a phone number");
+  });
+
+  it("keeps non-group fields as separate errors in page order", () => {
+    const middleware = createValidationMiddleware();
+    const req = makeReq({
+      body: {
+        _validationRules: {
+          email: JSON.stringify({ presence: { allowEmpty: false, message: "Enter your email" } }),
+          phone: PHONE_GROUP_RULES,
+        },
+        email: "",
+        phoneCountryCode: "+44",
+        phoneNumber: "",
+      },
+    });
+    middleware(req, makeRes(), makeNext());
+
+    const { errors, errorList } = req.session._validationErrors;
+    assert.deepEqual(errors.email, { text: "Enter your email" });
+    assert.deepEqual(errorList.map((e) => e.href), ["#email", "#phone-number"]);
+  });
+
+  it("passes when every member is valid, counting only digits for digitLength", () => {
+    const { flash, next } = runGroup({ phoneCountryCode: "+44", phoneNumber: "07700 900 123" });
+
+    assert.equal(flash, undefined);
+    assert.equal(next.called, true);
+  });
+
+  it("fails digitLength when there are too few digits", () => {
+    const { flash } = runGroup({ phoneCountryCode: "+44", phoneNumber: "0770 090" });
+
+    assert.equal(flash.errors.phone.text, "Phone number must be 10 or 11 digits");
+  });
+});

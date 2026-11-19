@@ -338,6 +338,37 @@ Use these example pages in the prototype:
 * `/validation/conditional-radios`
 * `/validation/conditional-checkboxes`
 
+### `digitLength`
+
+Use this like `length`, but it counts digits only. Spaces and other characters are ignored, which suits phone numbers like `07700 900 123`.
+
+* **`minimum`**, **`maximum`**, **`is`** (number): the digit limits.
+* **`message`**: the error text shown if the number of digits is wrong.
+
+```javascript
+digitLength: {
+  minimum: 10,
+  maximum: 11,
+  message: "Enter a phone number with 10 or 11 digits"
+}
+```
+
+## Validating a group of inputs (for example, a phone number)
+
+Sometimes two or more inputs answer one question, for example a country code and a phone number. Use `applyGroupValidation()` so they share **one** error message and one error summary entry, as the date input does.
+
+1. Import the macros in your layout: `{% from "macros/validation.njk" import applyValidation, applyGroupValidation %}`
+2. Write the `<fieldset class="nhsuk-fieldset" role="group">` out in HTML, inside a `<div class="nhsuk-form-group">` that also gets `nhsuk-form-group--error` when `errors.<group>` exists.
+3. Inside the fieldset, show one `errorMessage` with `errors.<group>.text`, and add its id to the fieldset's `aria-describedby`.
+4. Give each input `errorMessage: errors.<group> and "<inputName>" in errors.<group>.invalidFields`. This highlights only the invalid inputs.
+5. Add `applyGroupValidation('<group>', { <inputName>: { ...rules }, ... })` after the fieldset.
+
+The error summary links to the first invalid input, so each input's `id` must be the kebab-case of its `name` (for example `phoneNumber` → `phone-number`).
+
+See `/validation/input-group` for a complete working example, and the README for the full template.
+
+If you want to reuse the group as your own macro (for example `phoneInput`), put it in a separate file such as `app/views/macros/phone-input.njk`. Running `npm install` overwrites `app/views/macros/validation.njk`.
+
 ### Persisting selected state for conditional options
 
 When re-rendering a page after validation errors, keep the parent radio/checkbox option selected so the conditional input stays visible with its error message.
@@ -384,10 +415,11 @@ This is the current set of validation example fields and validators used in `app
 * `updateMethod` (conditional checkboxes parent): `presence`
 * `updateEmail` (conditional checkboxes reveal): `conditional`
 * `updatePhone` (conditional checkboxes reveal): `conditional`
+* `phone` group (`phoneCountryCode`, `phoneNumber`): `applyGroupValidation` with `format`, `presence`, `digitLength`
 
 ## Validators available
 
 The validation engine supports:
 
 * Validate.js built-in validators (for example `presence`, `length`, `email`, `type`, `inclusion`, `exclusion`, `format`, `numericality`, `equality`)
-* Custom validators in this prototype: `conditional`, `isValidDate` (plus aliases `validDate` and `customDate`), `isInPast`, `isInFuture`, `dateGuess`, `fileType`, `doesNotContain`
+* Custom validators in this prototype: `conditional`, `isValidDate` (plus aliases `validDate` and `customDate`), `isInPast`, `isInFuture`, `dateGuess`, `fileType`, `doesNotContain`, `digitLength`

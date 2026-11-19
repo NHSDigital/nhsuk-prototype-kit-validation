@@ -276,6 +276,29 @@ validate.validators.fileType = function (value, options) {
   return null;
 };
 
+// 8. Digit Length Validator — counts digits only, so spaces and punctuation in
+// formatted numbers (e.g. "07700 900 123") don't affect the length check.
+validate.validators.digitLength = function (value, options) {
+  if (validate.isEmpty(value)) return null;
+
+  const digitCount = `${value}`.replace(/\D/g, "").length;
+  const { is, minimum, maximum, message } = options || {};
+
+  const tooShort = typeof minimum === "number" && digitCount < minimum;
+  const tooLong = typeof maximum === "number" && digitCount > maximum;
+  const wrongLength = typeof is === "number" && digitCount !== is;
+
+  if (tooShort || tooLong || wrongLength) {
+    if (message) return message;
+    if (typeof is === "number") return `Must be ${is} digits`;
+    if (typeof minimum === "number" && typeof maximum === "number") return `Must be between ${minimum} and ${maximum} digits`;
+    if (typeof minimum === "number") return `Must be at least ${minimum} digits`;
+    return `Must be ${maximum} digits or fewer`;
+  }
+
+  return null;
+};
+
 module.exports = {
   validate,
   DEBUG_PREFIX,

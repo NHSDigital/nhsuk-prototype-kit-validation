@@ -35,7 +35,7 @@ Import the validation macro into your layout file, usually:
 **`app/views/layouts.html`** 
 
 ```njk
-{% from "macros/validation.njk" import applyValidation %}
+{% from "macros/validation.njk" import applyValidation, applyGroupValidation %}
 ```
 This shares the macro with any page that uses the layout with:
 
@@ -157,6 +157,22 @@ Use `is` for an exact length requirement:
 ```js
 length: { is: 6, message: "Enter a 6-digit code" }
 ```
+
+---
+
+### `digitLength`
+
+Like `length`, but counts digits only. Spaces and other characters are ignored, so `07700 900 123` counts as 11. Useful for phone numbers and other formatted numbers. Supports `minimum`, `maximum` and `is`.
+
+```js
+digitLength: {
+  minimum: 10,
+  maximum: 11,
+  message: "Enter a phone number with 10 or 11 digits"
+}
+```
+
+Pair it with `format` (for example `pattern: "[0-9 ]+"`) to reject letters.
 
 ---
 
@@ -297,6 +313,80 @@ All [validate.js](https://validatejs.org/) built-in validators are also availabl
 
 ---
 
+## Validating a group of inputs
+
+Use `applyGroupValidation()` when several inputs answer one question and should show **one** error, as a date input does. A phone number split into country code and number is an example.
+
+Each input keeps its own name and rules. Errors are combined under the group key:
+
+- `errors.<group>.text`: the message from the first invalid input (in the order the rules are listed)
+- `errors.<group>.invalidFields`: the names of every invalid input, used to highlight them
+- `errorList` gets one entry that links to the first invalid input (`phoneNumber` → `#phone-number`, so give each input an `id` that is the kebab-case of its name)
+
+```njk
+<div class="nhsuk-form-group {%- if errors.phone %} nhsuk-form-group--error{% endif %}">
+  <fieldset class="nhsuk-fieldset" role="group" aria-describedby="phone-hint {%- if errors.phone %} phone-error{% endif %}">
+    <legend class="nhsuk-fieldset__legend nhsuk-fieldset__legend--l">
+      <h1 class="nhsuk-fieldset__heading">What is your phone number?</h1>
+    </legend>
+
+    <div class="nhsuk-hint" id="phone-hint">Include your country or dialling code. The code for the UK is +44.</div>
+
+    {% if errors.phone %}
+      {{ errorMessage({ id: "phone-error", text: errors.phone.text }) }}
+    {% endif %}
+
+    <div class="nhsuk-form-group--inline">
+      {{ input({
+        label: { text: "Country code", classes: "nhsuk-u-visually-hidden" },
+        id: "phone-country-code",
+        name: "phoneCountryCode",
+        prefix: "+",
+        value: data.phoneCountryCode,
+        classes: "nhsuk-input--width-3",
+        errorMessage: errors.phone and "phoneCountryCode" in errors.phone.invalidFields
+      }) }}
+
+      {{ input({
+        label: { text: "Phone number", classes: "nhsuk-u-visually-hidden" },
+        id: "phone-number",
+        name: "phoneNumber",
+        value: data.phoneNumber,
+        classes: "nhsuk-input--width-10",
+        errorMessage: errors.phone and "phoneNumber" in errors.phone.invalidFields
+      }) }}
+    </div>
+  </fieldset>
+</div>
+
+{{ applyGroupValidation('phone', {
+  phoneCountryCode: {
+    presence: { allowEmpty: false, message: "Enter a country code, like +44" },
+    format: { pattern: "\\+?\\d{1,3}", message: "Enter a country code, like +44" }
+  },
+  phoneNumber: {
+    presence: { allowEmpty: false, message: "Enter a phone number" },
+    format: { pattern: "[0-9 ]+", message: "Enter a phone number using numbers only" },
+    digitLength: { minimum: 10, maximum: 11, message: "Enter a phone number with 10 or 11 digits" }
+  }
+}) }}
+```
+
+The fieldset is written out in HTML, so `errors.phone` goes straight into the markup. It's the same structure that `dateInput` renders internally:
+
+- **`nhsuk-form-group--error` on a wrapper div.** Draws the red bar once for the whole group. It can't go on the `<fieldset>` itself: the `nhsuk-fieldset` class removes borders and padding, and without that class the browser's default fieldset border shows. The wrapper also removes the red bar each invalid input would otherwise draw.
+- **`role="group"` and `aria-describedby` on the fieldset.** Screen readers announce the hint and error once for the whole group.
+- **`errorMessage: true` on an input** (from `errors.phone and "<name>" in errors.phone.invalidFields`). Highlights only the invalid inputs, without adding another message.
+- **`nhsuk-form-group--inline`** (from nhsuk-frontend). Puts the inputs side by side from tablet width up; they stack on mobile.
+
+Notes:
+
+- Don't also use `applyValidation()` on an input that is part of a group.
+- `format` skips empty values, so add `presence` to make a field required. The country code pattern allows an optional `+` because autofill can insert one, even though the prefix shows it.
+- To reuse a group like this, wrap it in your own macro file (for example `app/views/macros/phone-input.njk`). Don't edit `macros/validation.njk`, because it is overwritten each time you run `npm install`.
+
+---
+
 ## Debug logging
 
 Validation debug logging is **off by default**. Enable it with any of these flags:
@@ -328,7 +418,7 @@ The middleware automatically strips `_validationRules` and `_validationDebug` fr
 
 ## Example pages
 
-The `examples/` directory contains 12 working form pages covering every built-in validator. Run the setup script to add them to your prototype under `app/views/validation/`:
+The `examples/` directory contains 13 working form pages covering every built-in validator. Run the setup script to add them to your prototype under `app/views/validation/`:
 
 | Page | Validators demonstrated |
 |------|------------------------|
@@ -344,6 +434,7 @@ The `examples/` directory contains 12 working form pages covering every built-in
 | `file-upload.html` | `presence`, `fileType` |
 | `conditional-radios.html` | `presence`, `conditional` |
 | `conditional-checkboxes.html` | `presence`, `conditional` |
+| `input-group.html` | `applyGroupValidation`, `format`, `presence`, `digitLength` |
 
 ---
 
