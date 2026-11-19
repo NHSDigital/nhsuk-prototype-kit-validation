@@ -34,7 +34,7 @@ Next, wire it up manually:
 
   app/views/layouts.html — add with your other macro imports:
 
-    {% from "macros/validation.njk" import applyValidation %}
+    {% from "macros/validation.njk" import applyValidation, applyGroupValidation %}
 
 To add example pages and docs, run:
 

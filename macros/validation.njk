@@ -1,4 +1,10 @@
 {% macro applyValidation(field, rules) %}
   {# The 'dump' filter turns the JS object into a JSON string, 'escape' makes it safe for HTML attributes #}
-  <input type="hidden" name="_validationRules[{{ field }}]" value="{{ rules | dump | escape }}">
+  <input type="hidden" name="_validationRules[{{ field }}]" value="{{ rules | dump | escape }}" />
+{% endmacro %}
+
+{# Validates several inputs as one group: one error message, one error summary entry.
+   `group` is the error key (errors[group]); `fieldRules` maps each input name to its rules. #}
+{% macro applyGroupValidation(group, fieldRules) %}
+  <input type="hidden" name="_validationRules[{{ group }}]" value="{{ { _group: fieldRules } | dump | escape }}" />
 {% endmacro %}

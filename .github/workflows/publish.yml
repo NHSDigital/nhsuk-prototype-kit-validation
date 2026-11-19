@@ -17,9 +17,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
+
+      # Trusted Publishing (OIDC) requires npm >= 11.5.1. The Node version's
+      # bundled npm is often older than that, so upgrade explicitly rather
+      # than relying on whatever ships with the runner's Node install.
+      - run: npm install -g npm@latest
 
       - run: npm ci --ignore-scripts
 
@@ -32,8 +37,10 @@ jobs:
         if: contains(github.ref_name, '-')
         run: npm publish --tag beta --provenance --access public
 
-      # Full release tags (e.g. v0.3.0) → stage the package.
-      # A maintainer must review and 2FA-approve it on npmjs.com before it goes live.
-      - name: Stage full release (requires 2FA approval on npmjs.com)
+      # Full release tags (e.g. v0.3.0) → publish under the default "latest"
+      # dist-tag via npm's Trusted Publisher (OIDC) flow — no NPM token
+      # secret needed, provided the package is configured as a trusted
+      # publisher for this repo/workflow on npmjs.com.
+      - name: Publish full release
         if: "!contains(github.ref_name, '-')"
-        run: npm stage publish
+        run: npm publish --provenance --access public
